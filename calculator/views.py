@@ -52,7 +52,7 @@ class Calculate(View):
         return asset
 
     def save_new_data(self, alpha_vantage_data, asset):
-        existing_dates = AssetDateValue.objects.all().values_list('date', flat=True)
+        existing_dates = AssetDateValue.objects.filter(asset__ticker__iexact=asset.ticker).values_list('date', flat=True)
         for key, value in alpha_vantage_data.items():
             key_date = datetime.datetime.strptime(key, '%Y-%m-%d').date()
             if key_date not in list(existing_dates):
