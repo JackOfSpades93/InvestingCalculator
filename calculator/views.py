@@ -28,9 +28,43 @@ class Calculate(View):
         ticker = request.GET.get('ticker', "AAPL")
         monthly = float(request.GET.get('monthly', "100"))
         start_date = self.determine_start_date(request)
-
         self.update_historic_data(ticker)
-        return HttpResponse('ih')
+        result = self.calculate_result(monthly, start_date, ticker)
+        return JsonResponse(result, safe=False)
+
+    def calculate_result(self, monthly, start_date, ticker):
+        historic_data = AssetDateValue.objects \
+            .filter(asset__ticker__iexact=ticker) \
+            .filter(date__gte=start_date).order_by('date')
+        cash = 0
+        number_of_shares = 0
+        total_invested = 0
+        result = []
+        for row in historic_data:
+            cash += monthly
+            total_invested += monthly
+            bought_then = 0
+            adjusted_bought = 0
+            adjustment_ratio = row.close // row.adjusted_close
+            if cash > row.close and cash > row.adjusted_close:
+                bought_then = cash // row.close
+                cash -= bought_then * row.close
+                adjusted_bought = bought_then * adjustment_ratio
+                number_of_shares += adjusted_bought
+            result_row = {
+                'date': row.date,
+                'cash': cash,
+                'total_invested': total_invested,
+                'bought_then': bought_then,
+                'adjusted_bought': adjusted_bought,
+                'total_number_of_shares': number_of_shares,
+                'value_of_shares': number_of_shares / adjustment_ratio * row.close,
+                'portfolio_value': number_of_shares / adjustment_ratio * row.close + cash,
+                'close': row.close,
+                'adjusted_close': row.adjusted_close
+            }
+            result.append(result_row)
+        return result
 
     def determine_start_date(self, request):
         default_start = datetime.date.today()
@@ -52,7 +86,9 @@ class Calculate(View):
         return asset
 
     def save_new_data(self, alpha_vantage_data, asset):
-        existing_dates = AssetDateValue.objects.filter(asset__ticker__iexact=asset.ticker).values_list('date', flat=True)
+        existing_dates = AssetDateValue \
+            .filter(asset__ticker__iexact=asset.ticker) \
+            .values_list('date', flat=True)
         for key, value in alpha_vantage_data.items():
             key_date = datetime.datetime.strptime(key, '%Y-%m-%d').date()
             if key_date not in list(existing_dates):
