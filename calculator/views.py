@@ -5,6 +5,7 @@ from django.db.models import Q
 from django.core import serializers
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
+from config import CONFIG
 import datetime
 import requests
 
@@ -78,7 +79,7 @@ class Calculate(View):
         three_days_ago = (datetime.datetime.now() - datetime.timedelta(days=3)).date()
         if asset.last_update is None or asset.last_update < three_days_ago:
             url = 'https://www.alphavantage.co/query?function=TIME_SERIES_MONTHLY_ADJUSTED&symbol={}&apikey={}'
-            url = url.format(ticker, 'UNFVDVR01R2YAANJ')
+            url = url.format(ticker, CONFIG.alpha_vantage_key)
             response = requests.get(url)
             if response.status_code == 200:
                 try:
