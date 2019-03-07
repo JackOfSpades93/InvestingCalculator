@@ -79,11 +79,14 @@ class Calculate(View):
         if asset.last_update is None or asset.last_update < three_days_ago:
             url = 'https://www.alphavantage.co/query?function=TIME_SERIES_MONTHLY_ADJUSTED&symbol={}&apikey={}'
             url = url.format(ticker, 'UNFVDVR01R2YAANJ')
-            alpha_vantage_data = requests.get(url).json()['Monthly Adjusted Time Series']
-
-            self.delete_redundant_data(alpha_vantage_data, ticker)
-            self.save_new_data(alpha_vantage_data, asset)
-        return asset
+            response = requests.get(url)
+            if response.status_code == 200:
+                try:
+                    alpha_vantage_data = response.json()['Monthly Adjusted Time Series']
+                    self.delete_redundant_data(alpha_vantage_data, ticker)
+                    self.save_new_data(alpha_vantage_data, asset)
+                except ValueError:
+                    print('failed to update historic data')
 
     def save_new_data(self, alpha_vantage_data, asset):
         existing_dates = AssetDateValue \
