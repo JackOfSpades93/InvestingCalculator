@@ -41,32 +41,35 @@ class Calculate(View):
 
     def update_historic_data(self, ticker):
         asset = Asset.objects.get(ticker__iexact=ticker)
-        if asset.last_update is None or asset.last_update < (
-                datetime.datetime.now() - datetime.timedelta(days=3)).date():
-            url = 'https://www.alphavantage.co/query?function=TIME_SERIES_MONTHLY_ADJUSTED&symbol={}&apikey={}'.format(
-                ticker, 'UNFVDVR01R2YAANJ')
-            data = requests.get(url).json()['Monthly Adjusted Time Series']
+        three_days_ago = (datetime.datetime.now() - datetime.timedelta(days=3)).date()
+        if asset.last_update is None or asset.last_update < three_days_ago:
+            url = 'https://www.alphavantage.co/query?function=TIME_SERIES_MONTHLY_ADJUSTED&symbol={}&apikey={}'
+            url = url.format(ticker, 'UNFVDVR01R2YAANJ')
+            alpha_vantage_data = requests.get(url).json()['Monthly Adjusted Time Series']
 
-            self.delete_redundant_data(data, ticker)
-            existing_dates = AssetDateValue.objects.all().values_list('date', flat=True)
-            for key, value in data.items():
-                key_date = datetime.datetime.strptime(key, '%Y-%m-%d').date()
-                if key_date not in list(existing_dates):
-                    new = AssetDateValue()
-                    new.asset = asset
-                    new.date = key
-                    new.open = value['1. open']
-                    new.high = value['2. high']
-                    new.low = value['3. low']
-                    new.close = value['4. close']
-                    new.adjusted_close = value['5. adjusted close']
-                    new.volume = value['6. volume']
-                    new.dividend = value['7. dividend amount']
-                    print('saving {}'.format(new))
-                    new.save()
-            asset.last_update = datetime.datetime.now().date()
-            asset.save()
+            self.delete_redundant_data(alpha_vantage_data, ticker)
+            self.save_new_data(alpha_vantage_data, asset)
         return asset
+
+    def save_new_data(self, alpha_vantage_data, asset):
+        existing_dates = AssetDateValue.objects.all().values_list('date', flat=True)
+        for key, value in alpha_vantage_data.items():
+            key_date = datetime.datetime.strptime(key, '%Y-%m-%d').date()
+            if key_date not in list(existing_dates):
+                new = AssetDateValue()
+                new.asset = asset
+                new.date = key
+                new.open = value['1. open']
+                new.high = value['2. high']
+                new.low = value['3. low']
+                new.close = value['4. close']
+                new.adjusted_close = value['5. adjusted close']
+                new.volume = value['6. volume']
+                new.dividend = value['7. dividend amount']
+                print('saving {}'.format(new))
+                new.save()
+        asset.last_update = datetime.datetime.now().date()
+        asset.save()
 
     def delete_redundant_data(self, data, ticker):
         stuff_to_delete = AssetDateValue.objects.filter(asset__ticker__iexact=ticker).exclude(date__in=data.keys())
