@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from django.http.response import JsonResponse, HttpResponse
-from calculator.models import Asset, AssetDateValue
+from calculator.models import Asset, AssetDateValue, PreviousSearch
 from django.db.models import Q
 from django.core import serializers
 from django.views import View
@@ -125,7 +125,7 @@ class SearchAsset(View):
         print('search is : {}'.format(search))
         result = list(Asset.objects.filter(Q(ticker__icontains=search) | Q(name__icontains=search)))
         try:
-            if len(result) == 0:
+            if self.should_search_for(search_string=search):
                 url = 'https://www.alphavantage.co/query?function=SYMBOL_SEARCH&keywords="{}"&apikey={}'
                 url = url.format(search, CONFIG.alpha_vantage_key)
                 response = requests.get(url)
@@ -143,3 +143,21 @@ class SearchAsset(View):
             traceback.print_exc()
         serialized = serializers.serialize('json', result)
         return HttpResponse(serialized, content_type='application/json')
+
+    def should_search_for(self, search_string):
+        searches = PreviousSearch.objects.filter(search__iexact=search_string)
+        if len(searches) == 0:
+            new_search = PreviousSearch()
+            new_search.search_date = datetime.datetime.now().date()
+            new_search.search = search_string
+            new_search.save()
+            return True
+        else:
+            found_search = searches[0]
+            thirty_days_ago = (datetime.datetime.now() - datetime.timedelta(days=30)).date()
+            if found_search.search_date < thirty_days_ago:
+                found_search.search_date = datetime.datetime.now().date()
+                found_search.save()
+                return True
+            else:
+                return False
