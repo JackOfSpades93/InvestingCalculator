@@ -7,6 +7,7 @@ from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 from config import CONFIG
 import datetime
+import traceback
 import requests
 
 
@@ -123,5 +124,22 @@ class SearchAsset(View):
         search = request.POST.get('search', "")
         print('search is : {}'.format(search))
         result = list(Asset.objects.filter(Q(ticker__icontains=search) | Q(name__icontains=search)))
+        try:
+            if len(result) == 0:
+                url = 'https://www.alphavantage.co/query?function=SYMBOL_SEARCH&keywords="{}"&apikey={}'
+                url = url.format(search, CONFIG.alpha_vantage_key)
+                response = requests.get(url)
+                if response.status_code == 200:
+                    data = response.json()['bestMatches']
+                    existing_tickers = Asset.objects.all().values_list('ticker', flat=True)
+                    for row in data:
+                        if row['1. symbol'] not in existing_tickers:
+                            new = Asset()
+                            new.ticker = row['1. symbol']
+                            new.name = row['2. name']
+                            new.save()
+                            result.append(new)
+        except:
+            traceback.print_exc()
         serialized = serializers.serialize('json', result)
         return HttpResponse(serialized, content_type='application/json')

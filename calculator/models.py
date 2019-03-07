@@ -6,7 +6,7 @@ from django.contrib import admin
 
 class Asset(models.Model):
     id = models.AutoField(primary_key=True)
-    ticker = models.CharField(max_length=10)
+    ticker = models.CharField(max_length=100)
     name = models.CharField(max_length=100)
     last_update = models.DateField(default=None, blank=True, null=True)
 
