@@ -89,7 +89,7 @@ class Calculate(View):
                     print('failed to update historic data')
 
     def save_new_data(self, alpha_vantage_data, asset):
-        existing_dates = AssetDateValue \
+        existing_dates = AssetDateValue.objects \
             .filter(asset__ticker__iexact=asset.ticker) \
             .values_list('date', flat=True)
         for key, value in alpha_vantage_data.items():
