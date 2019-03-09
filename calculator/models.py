@@ -39,4 +39,4 @@ admin.site.register(AssetDateValue)
 class PreviousSearch(models.Model):
     id = models.AutoField(primary_key=True)
     search = models.CharField(max_length=100)
-    search_date = models.DateField()
+    search_date = models.DateField(default=None, blank=True, null=True)

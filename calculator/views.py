@@ -139,6 +139,10 @@ class SearchAsset(View):
                             new.name = row['2. name']
                             new.save()
                             result.append(new)
+                    searches = PreviousSearch.objects.filter(search__iexact=search)
+                    found_search = searches[0]
+                    found_search.search_date = datetime.datetime.now().date()
+                    found_search.save()
         except:
             traceback.print_exc()
         serialized = serializers.serialize('json', result)
@@ -148,7 +152,6 @@ class SearchAsset(View):
         searches = PreviousSearch.objects.filter(search__iexact=search_string)
         if len(searches) == 0:
             new_search = PreviousSearch()
-            new_search.search_date = datetime.datetime.now().date()
             new_search.search = search_string
             new_search.save()
             return True
@@ -156,8 +159,6 @@ class SearchAsset(View):
             found_search = searches[0]
             thirty_days_ago = (datetime.datetime.now() - datetime.timedelta(days=30)).date()
             if found_search.search_date < thirty_days_ago:
-                found_search.search_date = datetime.datetime.now().date()
-                found_search.save()
                 return True
             else:
                 return False
