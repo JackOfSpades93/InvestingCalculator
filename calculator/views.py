@@ -48,6 +48,8 @@ class Calculate(View):
             bought_then = 0
             adjusted_bought = 0
             adjustment_ratio = row.close // row.adjusted_close
+            if adjustment_ratio == 0:
+                adjustment_ratio = 1
             if cash > row.close and cash > row.adjusted_close:
                 bought_then = cash // row.close
                 cash -= bought_then * row.close
@@ -63,7 +65,8 @@ class Calculate(View):
                 'value_of_shares': number_of_shares / adjustment_ratio * row.close,
                 'portfolio_value': number_of_shares / adjustment_ratio * row.close + cash,
                 'close': row.close,
-                'adjusted_close': row.adjusted_close
+                'adjusted_close': row.adjusted_close,
+                'ticker': ticker
             }
             result.append(result_row)
         return result
