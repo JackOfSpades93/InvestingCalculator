@@ -1,2 +1,4 @@
 psycopg2
 requests
+django
+django-cors-headers
