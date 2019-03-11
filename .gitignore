@@ -107,4 +107,6 @@ venv.bak/
 
 .idea/*
 notes
+config.py
+upload_image.ps1
 
