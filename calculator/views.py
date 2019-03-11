@@ -80,19 +80,21 @@ class Calculate(View):
         return start_date
 
     def update_historic_data(self, ticker):
-        asset = Asset.objects.get(ticker__iexact=ticker)
-        three_days_ago = (datetime.datetime.now() - datetime.timedelta(days=3)).date()
-        if asset.last_update is None or asset.last_update < three_days_ago:
-            url = 'https://www.alphavantage.co/query?function=TIME_SERIES_MONTHLY_ADJUSTED&symbol={}&apikey={}'
-            url = url.format(ticker, CONFIG.alpha_vantage_key)
-            response = requests.get(url)
-            if response.status_code == 200:
-                try:
-                    alpha_vantage_data = response.json()['Monthly Adjusted Time Series']
-                    self.delete_redundant_data(alpha_vantage_data, ticker)
-                    self.save_new_data(alpha_vantage_data, asset)
-                except (ValueError, KeyError):
-                    print('failed to update historic data at : {}'.format(url))
+        asset = Asset.objects.filter(ticker__iexact=ticker)
+        if len(asset) > 0:
+            asset = asset[0]
+            three_days_ago = (datetime.datetime.now() - datetime.timedelta(days=3)).date()
+            if asset.last_update is None or asset.last_update < three_days_ago:
+                url = 'https://www.alphavantage.co/query?function=TIME_SERIES_MONTHLY_ADJUSTED&symbol={}&apikey={}'
+                url = url.format(ticker, CONFIG.alpha_vantage_key)
+                response = requests.get(url)
+                if response.status_code == 200:
+                    try:
+                        alpha_vantage_data = response.json()['Monthly Adjusted Time Series']
+                        self.delete_redundant_data(alpha_vantage_data, ticker)
+                        self.save_new_data(alpha_vantage_data, asset)
+                    except (ValueError, KeyError):
+                        print('failed to update historic data at : {}'.format(url))
 
     def save_new_data(self, alpha_vantage_data, asset):
         existing_dates = AssetDateValue.objects \
