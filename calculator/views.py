@@ -47,28 +47,29 @@ class Calculate(View):
             total_invested += monthly
             bought_then = 0
             adjusted_bought = 0
-            adjustment_ratio = row.close // row.adjusted_close
-            if adjustment_ratio == 0:
-                adjustment_ratio = 1
-            if cash > row.close and cash > row.adjusted_close:
-                bought_then = cash // row.close
-                cash -= bought_then * row.close
-                adjusted_bought = bought_then * adjustment_ratio
-                number_of_shares += adjusted_bought
-            result_row = {
-                'date': row.date,
-                'cash': cash,
-                'total_invested': total_invested,
-                'bought_then': bought_then,
-                'adjusted_bought': adjusted_bought,
-                'total_number_of_shares': number_of_shares,
-                'value_of_shares': number_of_shares / adjustment_ratio * row.close,
-                'portfolio_value': number_of_shares / adjustment_ratio * row.close + cash,
-                'close': row.close,
-                'adjusted_close': row.adjusted_close,
-                'ticker': ticker
-            }
-            result.append(result_row)
+            if row.close > 0 and row.adjusted_close > 0:
+                adjustment_ratio = row.close / row.adjusted_close
+                if adjustment_ratio == 0:
+                    adjustment_ratio = 1
+                if cash > row.close:
+                    bought_then = cash // row.close
+                    cash -= bought_then * row.close
+                    adjusted_bought = bought_then * adjustment_ratio
+                    number_of_shares += adjusted_bought
+                result_row = {
+                    'date': row.date,
+                    'cash': cash,
+                    'total_invested': total_invested,
+                    'bought_then': bought_then,
+                    'adjusted_bought': adjusted_bought,
+                    'total_number_of_shares': number_of_shares,
+                    'value_of_shares': number_of_shares / adjustment_ratio * row.close,
+                    'portfolio_value': number_of_shares / adjustment_ratio * row.close + cash,
+                    'close': row.close,
+                    'adjusted_close': row.adjusted_close,
+                    'ticker': ticker
+                }
+                result.append(result_row)
         return result
 
     def determine_start_date(self, request):
@@ -90,8 +91,8 @@ class Calculate(View):
                     alpha_vantage_data = response.json()['Monthly Adjusted Time Series']
                     self.delete_redundant_data(alpha_vantage_data, ticker)
                     self.save_new_data(alpha_vantage_data, asset)
-                except ValueError:
-                    print('failed to update historic data')
+                except (ValueError, KeyError):
+                    print('failed to update historic data at : {}'.format(url))
 
     def save_new_data(self, alpha_vantage_data, asset):
         existing_dates = AssetDateValue.objects \
@@ -161,7 +162,7 @@ class SearchAsset(View):
         else:
             found_search = searches[0]
             thirty_days_ago = (datetime.datetime.now() - datetime.timedelta(days=30)).date()
-            if found_search.search_date < thirty_days_ago:
+            if found_search.search_date and found_search.search_date < thirty_days_ago:
                 return True
             else:
                 return False
