@@ -9,6 +9,7 @@ from config import CONFIG
 import datetime
 import traceback
 import requests
+from django.shortcuts import redirect
 
 
 # Create your views here.
@@ -23,6 +24,10 @@ def random_json_response(request):
 def hello_world(request):
     today = datetime.datetime.now().date()
     return render(request, 'hello.html', {'today': today})
+
+
+def redirect_view(request):
+    return redirect('http://www.pajic.net', permanent=False)
 
 
 class Calculate(View):
