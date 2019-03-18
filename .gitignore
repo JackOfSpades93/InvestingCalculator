@@ -109,4 +109,6 @@ venv.bak/
 notes
 config.py
 upload_image.ps1
+/InvestingCalculator/settings.py
+/djangostatics/*
 
